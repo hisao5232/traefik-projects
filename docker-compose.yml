@@ -1,0 +1,79 @@
+version: '3.9'
+
+services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    command:
+      - --configFile=/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/traefik/traefik.yml
+      - ./traefik/acme.json:/letsencrypt/acme.json
+    networks:
+      - proxy-tier
+    restart: always
+
+  web:
+    build:
+      context: ./flask-app
+    container_name: flask-todo-web
+    environment:
+      - DB_HOST=flask-todo-db
+      - DB_PORT=3306
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    env_file:
+      - ./flask-app/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+      - proxy-tier
+    expose:
+      - "5000"
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flask-app.rule=Host(`todo-flask.go-pro-world.net`)"
+      - "traefik.http.routers.flask-app.entrypoints=websecure"
+      - "traefik.http.routers.flask-app.tls.certresolver=le"
+      - "traefik.http.routers.flask-app.service=flask-app"
+      - "traefik.http.services.flask-app.loadbalancer.server.port=5000"
+      - "traefik.http.services.flask-app.loadbalancer.server.scheme=http"
+
+  db:
+    image: mysql:8.1
+    container_name: flask-todo-db
+    restart: always
+    env_file:
+      - ./flask-app/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+volumes:
+  mysql_data:
+
+networks:
+  proxy-tier:
+    external: true
+  internal:
+    driver: bridge

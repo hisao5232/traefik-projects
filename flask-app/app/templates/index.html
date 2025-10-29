@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Todo App</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; }
+        input[type="text"] { width: 300px; padding: 5px; }
+        button { padding: 5px 10px; margin-left: 5px; }
+        li.done { text-decoration: line-through; color: gray; }
+    </style>
+</head>
+<body>
+    <h1>Todo List</h1>
+
+    <form id="todo-form">
+        <input type="text" id="task" placeholder="タスクを入力" required>
+        <button type="submit">追加</button>
+    </form>
+
+    <ul id="todo-list"></ul>
+
+    <script>
+        const form = document.getElementById("todo-form");
+        const taskInput = document.getElementById("task");
+        const todoList = document.getElementById("todo-list");
+
+        // タスク取得
+        async function fetchTodos() {
+            const res = await fetch("/todos");
+            const todos = await res.json();
+            todoList.innerHTML = "";
+            todos.forEach(todo => {
+                const li = document.createElement("li");
+                li.textContent = todo.task;
+                li.dataset.id = todo.id;
+                if (todo.done) li.classList.add("done");
+
+                // 完了ボタン
+                const doneBtn = document.createElement("button");
+                doneBtn.textContent = "完了";
+                doneBtn.onclick = async () => {
+                    await fetch(`/todos/${todo.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ done: !todo.done })
+                    });
+                    fetchTodos();
+                };
+
+                // 削除ボタン
+                const delBtn = document.createElement("button");
+                delBtn.textContent = "削除";
+                delBtn.onclick = async () => {
+                    await fetch(`/todos/${todo.id}`, { method: "DELETE" });
+                    fetchTodos();
+                };
+
+                li.appendChild(doneBtn);
+                li.appendChild(delBtn);
+                todoList.appendChild(li);
+            });
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            await fetch("/todos", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task: taskInput.value })
+            });
+            taskInput.value = "";
+            fetchTodos();
+        };
+
+        fetchTodos();
+    </script>
+</body>
+</html>

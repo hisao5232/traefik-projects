@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Flask env
+flask-app/.env
+
+# Traefik cert data
+traefik/acme.json
+
+# Docker
+*.log
+.env
+*.pid
+*~ 
+
+# MySQL data (volume data)
+mysql_data/

@@ -1,0 +1,23 @@
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  traefik:
+    address: ":8080"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+certificatesResolvers:
+  le:
+    acme:
+      email: hisao52321983@gmail.com
+      storage: /letsencrypt/acme.json
+      tlsChallenge: {}
+
+api:
+  dashboard: true
+  insecure: false
