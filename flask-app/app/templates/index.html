@@ -8,10 +8,16 @@
         input[type="text"] { width: 300px; padding: 5px; }
         button { padding: 5px 10px; margin-left: 5px; }
         li.done { text-decoration: line-through; color: gray; }
+        .header { display: flex; align-items: center; justify-content: space-between; }
     </style>
 </head>
 <body>
-    <h1>Todo List</h1>
+    <div class="header">
+        <h1>Todo List</h1>
+        <form action="/logout" method="get">
+            <button type="submit">ログアウト</button>
+        </form>
+    </div>
 
     <form id="todo-form">
         <input type="text" id="task" placeholder="タスクを入力" required>
@@ -27,7 +33,12 @@
 
         // タスク取得
         async function fetchTodos() {
-            const res = await fetch("/todos");
+            const res = await fetch("/todos", { credentials: "same-origin" });
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.error || "タスク取得に失敗");
+                return;
+            }
             const todos = await res.json();
             todoList.innerHTML = "";
             todos.forEach(todo => {
@@ -43,6 +54,7 @@
                     await fetch(`/todos/${todo.id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
+                        credentials: "same-origin",
                         body: JSON.stringify({ done: !todo.done })
                     });
                     fetchTodos();
@@ -52,7 +64,10 @@
                 const delBtn = document.createElement("button");
                 delBtn.textContent = "削除";
                 delBtn.onclick = async () => {
-                    await fetch(`/todos/${todo.id}`, { method: "DELETE" });
+                    await fetch(`/todos/${todo.id}`, {
+                        method: "DELETE",
+                        credentials: "same-origin"
+                    });
                     fetchTodos();
                 };
 
@@ -67,6 +82,7 @@
             await fetch("/todos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
                 body: JSON.stringify({ task: taskInput.value })
             });
             taskInput.value = "";

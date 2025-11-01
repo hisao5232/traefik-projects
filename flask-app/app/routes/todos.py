@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, render_template
-import os, pymysql, time
+from flask import Blueprint, render_template, jsonify, request, session, redirect, url_for
+import pymysql, os, time
 
-app = Flask(__name__)
+todos_bp = Blueprint("todos", __name__)
 
 db_host = os.getenv("DB_HOST", "localhost")
 db_user = os.getenv("MYSQL_USER")
@@ -35,16 +35,30 @@ def init_db(retries=5, delay=3):
             conn.close()
             print("DB initialized successfully")
             return
-        except pymysql.err.OperationalError as e:
+        except pymysql.err.OperationalError:
             print(f"DB not ready, retrying in {delay}s... ({i+1}/{retries})")
             time.sleep(delay)
     print("DB Init failed after retries")
 
 init_db()
 
-# ---------- CRUD API ----------
-@app.route("/todos", methods=["GET"])
+# ------- ページ表示 -------
+@todos_bp.route("/")
+def index():
+    if "user" not in session:
+        return redirect(url_for("auth.login"))
+    return render_template("index.html")
+
+# ------- API -------
+def check_login():
+    if "user" not in session:
+        return False, {"error": "ログインしてください"}, 401
+    return True, None, None
+
+@todos_bp.route("/todos", methods=["GET"])
 def get_todos():
+    ok, resp, status = check_login()
+    if not ok: return resp, status
     try:
         conn = get_conn()
         with conn.cursor() as cursor:
@@ -55,8 +69,11 @@ def get_todos():
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/todos", methods=["POST"])
+@todos_bp.route("/todos", methods=["POST"])
 def create_todo():
+    ok, resp, status = check_login()
+    if not ok: return resp, status
+
     data = request.json
     task = data.get("task")
     if not task:
@@ -71,8 +88,11 @@ def create_todo():
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/todos/<int:todo_id>", methods=["PUT"])
+@todos_bp.route("/todos/<int:todo_id>", methods=["PUT"])
 def update_todo(todo_id):
+    ok, resp, status = check_login()
+    if not ok: return resp, status
+
     data = request.json
     done = data.get("done")
     if done is None:
@@ -87,8 +107,11 @@ def update_todo(todo_id):
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/todos/<int:todo_id>", methods=["DELETE"])
+@todos_bp.route("/todos/<int:todo_id>", methods=["DELETE"])
 def delete_todo(todo_id):
+    ok, resp, status = check_login()
+    if not ok: return resp, status
+
     try:
         conn = get_conn()
         with conn.cursor() as cursor:
@@ -98,11 +121,3 @@ def delete_todo(todo_id):
         return {"message": "Todo deleted"}
     except Exception as e:
         return {"error": str(e)}, 500
-
-# ---------- HTML表示 ----------
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
