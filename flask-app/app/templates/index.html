@@ -5,10 +5,13 @@
     <title>Todo App</title>
     <style>
         body { font-family: sans-serif; margin: 40px; }
-        input[type="text"] { width: 300px; padding: 5px; }
+        input[type="text"], input[type="date"] { width: 300px; padding: 5px; margin-bottom: 5px; }
+        textarea { width: 300px; height: 60px; padding: 5px; margin-bottom: 5px; }
         button { padding: 5px 10px; margin-left: 5px; }
         li.done { text-decoration: line-through; color: gray; }
         .header { display: flex; align-items: center; justify-content: space-between; }
+        .todo-item { border-bottom: 1px solid #ccc; padding: 10px 0; }
+        .edit-input { display: block; margin-bottom: 5px; width: 300px; padding: 5px; }
     </style>
 </head>
 <body>
@@ -19,8 +22,11 @@
         </form>
     </div>
 
+    <!-- 新規タスクフォーム -->
     <form id="todo-form">
-        <input type="text" id="task" placeholder="タスクを入力" required>
+        <input type="text" id="task" placeholder="タスクを入力" required><br>
+        <textarea id="description" placeholder="詳細を入力"></textarea><br>
+        <input type="date" id="due_date"><br>
         <button type="submit">追加</button>
     </form>
 
@@ -29,6 +35,8 @@
     <script>
         const form = document.getElementById("todo-form");
         const taskInput = document.getElementById("task");
+        const descriptionInput = document.getElementById("description");
+        const dueDateInput = document.getElementById("due_date");
         const todoList = document.getElementById("todo-list");
 
         // タスク取得
@@ -41,29 +49,42 @@
             }
             const todos = await res.json();
             todoList.innerHTML = "";
+
             todos.forEach(todo => {
                 const li = document.createElement("li");
-                li.textContent = todo.task;
-                li.dataset.id = todo.id;
+                li.className = "todo-item";
                 if (todo.done) li.classList.add("done");
 
-                // 完了ボタン
-                const doneBtn = document.createElement("button");
-                doneBtn.textContent = "完了";
-                doneBtn.onclick = async () => {
+                // 表示用HTML
+                li.innerHTML = `
+                    <strong>${todo.task}</strong><br>
+                    ${todo.description || ""}<br>
+                    期限: ${todo.due_date || "なし"}
+                    <div style="margin-top:5px;">
+                        <button class="toggle-done">${todo.done ? "未完了に戻す" : "完了"}</button>
+                        <button class="edit">編集</button>
+                        <button class="delete">削除</button>
+                    </div>
+                `;
+
+                // 完了切替
+                li.querySelector(".toggle-done").onclick = async () => {
                     await fetch(`/todos/${todo.id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
                         credentials: "same-origin",
-                        body: JSON.stringify({ done: !todo.done })
+                        body: JSON.stringify({
+                            task: todo.task,
+                            description: todo.description,
+                            due_date: todo.due_date,
+                            done: !todo.done
+                        })
                     });
                     fetchTodos();
                 };
 
-                // 削除ボタン
-                const delBtn = document.createElement("button");
-                delBtn.textContent = "削除";
-                delBtn.onclick = async () => {
+                // 削除
+                li.querySelector(".delete").onclick = async () => {
                     await fetch(`/todos/${todo.id}`, {
                         method: "DELETE",
                         credentials: "same-origin"
@@ -71,21 +92,60 @@
                     fetchTodos();
                 };
 
-                li.appendChild(doneBtn);
-                li.appendChild(delBtn);
+                // 編集
+                li.querySelector(".edit").onclick = () => {
+                    li.innerHTML = `
+                        <input type="text" class="edit-input edit-task" value="${todo.task}" required>
+                        <textarea class="edit-input edit-description">${todo.description || ""}</textarea>
+                        <input type="date" class="edit-input edit-due" value="${todo.due_date || ""}">
+                        <button class="save">保存</button>
+                        <button class="cancel">キャンセル</button>
+                    `;
+
+                    // 保存
+                    li.querySelector(".save").onclick = async () => {
+                        const newTask = li.querySelector(".edit-task").value;
+                        const newDesc = li.querySelector(".edit-description").value;
+                        const newDue = li.querySelector(".edit-due").value || null;
+
+                        await fetch(`/todos/${todo.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            credentials: "same-origin",
+                            body: JSON.stringify({
+                                task: newTask,
+                                description: newDesc,
+                                due_date: newDue,
+                                done: todo.done
+                            })
+                        });
+                        fetchTodos();
+                    };
+
+                    // キャンセル
+                    li.querySelector(".cancel").onclick = () => fetchTodos();
+                };
+
                 todoList.appendChild(li);
             });
         }
 
+        // 新規タスク追加
         form.onsubmit = async (e) => {
             e.preventDefault();
             await fetch("/todos", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "same-origin",
-                body: JSON.stringify({ task: taskInput.value })
+                body: JSON.stringify({
+                    task: taskInput.value,
+                    description: descriptionInput.value,
+                    due_date: dueDateInput.value || null
+                })
             });
             taskInput.value = "";
+            descriptionInput.value = "";
+            dueDateInput.value = "";
             fetchTodos();
         };
 

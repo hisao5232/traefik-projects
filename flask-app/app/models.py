@@ -21,10 +21,13 @@ def init_db(retries=5, delay=3):
         try:
             conn = get_conn()
             with conn.cursor() as cursor:
+                # todosテーブルにdescriptionとdue_dateを追加
                 cursor.execute("""
                 CREATE TABLE IF NOT EXISTS todos (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     task VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    due_date DATE,
                     done BOOLEAN DEFAULT FALSE
                 )
                 """)
@@ -40,5 +43,6 @@ def init_db(retries=5, delay=3):
             print("DB initialized successfully")
             return
         except pymysql.err.OperationalError:
+            print(f"DB not ready, retrying in {delay}s... ({i+1}/{retries})")
             time.sleep(delay)
     print("DB Init failed after retries")
