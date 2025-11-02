@@ -1,0 +1,71 @@
+body {
+    background-color: #f8f9fa;
+    font-family: 'Noto Sans JP', sans-serif;
+}
+
+.container {
+    max-width: 700px;
+    margin-top: 40px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.todo-item {
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 0;
+}
+
+.todo-item.done strong {
+    text-decoration: line-through;
+    color: gray;
+}
+
+.todo-item small {
+    color: #6c757d;
+}
+
+form button {
+    margin-top: 5px;
+}
+
+.edit-input {
+    margin-bottom: 10px;
+}
+
+textarea {
+    resize: none;
+}
+
+/* ===== フェードイン効果 ===== */
+.fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+  
+  .fade-in.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+/* ===== ボタンホバー効果 ===== */
+button, .btn {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  button:hover, .btn:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.4);
+  }
+  

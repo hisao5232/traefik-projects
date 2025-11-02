@@ -1,18 +1,19 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>ログイン</title>
-</head>
-<body>
-    <h1>ログイン</h1>
+{% extends "layout.html" %}
+{% block title %}ログイン{% endblock %}
+{% block content %}
+<div class="container bg-white p-4 rounded shadow-sm mt-5" style="max-width:400px;">
+    <h2 class="text-center mb-4">🔐 ログイン</h2>
     {% if error %}
-        <p style="color:red;">{{ error }}</p>
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
     {% endif %}
     <form method="post">
-        <input type="text" name="user_id" placeholder="ユーザーID" required>
-        <input type="password" name="password" placeholder="パスワード" required>
-        <button type="submit">ログイン</button>
+        <div class="mb-3">
+            <input type="text" name="user_id" class="form-control" placeholder="ユーザーID" required>
+        </div>
+        <div class="mb-3">
+            <input type="password" name="password" class="form-control" placeholder="パスワード" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">ログイン</button>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}

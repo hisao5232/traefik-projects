@@ -1,155 +1,153 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>Todo App</title>
-    <style>
-        body { font-family: sans-serif; margin: 40px; }
-        input[type="text"], input[type="date"] { width: 300px; padding: 5px; margin-bottom: 5px; }
-        textarea { width: 300px; height: 60px; padding: 5px; margin-bottom: 5px; }
-        button { padding: 5px 10px; margin-left: 5px; }
-        li.done { text-decoration: line-through; color: gray; }
-        .header { display: flex; align-items: center; justify-content: space-between; }
-        .todo-item { border-bottom: 1px solid #ccc; padding: 10px 0; }
-        .edit-input { display: block; margin-bottom: 5px; width: 300px; padding: 5px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Todo List</h1>
+{% extends "layout.html" %}
+{% block title %}Todo App{% endblock %}
+{% block content %}
+<div class="bg-white p-4 rounded shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0 fade-in">📝 Todo List</h2>
         <form action="/logout" method="get">
-            <button type="submit">ログアウト</button>
+            <button type="submit" class="btn btn-outline-danger btn-sm">ログアウト</button>
         </form>
     </div>
 
     <!-- 新規タスクフォーム -->
-    <form id="todo-form">
-        <input type="text" id="task" placeholder="タスクを入力" required><br>
-        <textarea id="description" placeholder="詳細を入力"></textarea><br>
-        <input type="date" id="due_date"><br>
-        <button type="submit">追加</button>
+    <form id="todo-form" class="mb-4">
+        <div class="mb-3">
+            <input type="text" id="task" class="form-control" placeholder="タスクを入力" required>
+        </div>
+        <div class="mb-3">
+            <textarea id="description" class="form-control" placeholder="詳細を入力"></textarea>
+        </div>
+        <div class="mb-3">
+            <input type="date" id="due_date" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">追加</button>
     </form>
 
-    <ul id="todo-list"></ul>
+    <ul id="todo-list" class="list-unstyled"></ul>
+</div>
 
-    <script>
-        const form = document.getElementById("todo-form");
-        const taskInput = document.getElementById("task");
-        const descriptionInput = document.getElementById("description");
-        const dueDateInput = document.getElementById("due_date");
-        const todoList = document.getElementById("todo-list");
+<script>
+const form = document.getElementById("todo-form");
+const taskInput = document.getElementById("task");
+const descriptionInput = document.getElementById("description");
+const dueDateInput = document.getElementById("due_date");
+const todoList = document.getElementById("todo-list");
 
-        // タスク取得
-        async function fetchTodos() {
-            const res = await fetch("/todos", { credentials: "same-origin" });
-            if (!res.ok) {
-                const err = await res.json();
-                alert(err.error || "タスク取得に失敗");
-                return;
-            }
-            const todos = await res.json();
-            todoList.innerHTML = "";
+// タスク取得
+async function fetchTodos() {
+    const res = await fetch("/todos", { credentials: "same-origin" });
+    if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "タスク取得に失敗");
+        return;
+    }
+    const todos = await res.json();
+    todoList.innerHTML = "";
 
-            todos.forEach(todo => {
-                const li = document.createElement("li");
-                li.className = "todo-item";
-                if (todo.done) li.classList.add("done");
+    todos.forEach(todo => {
+        const li = document.createElement("li");
+        li.className = "todo-item";
+        if (todo.done) li.classList.add("done");
 
-                // 表示用HTML
-                li.innerHTML = `
+        li.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
                     <strong>${todo.task}</strong><br>
-                    ${todo.description || ""}<br>
-                    期限: ${todo.due_date || "なし"}
-                    <div style="margin-top:5px;">
-                        <button class="toggle-done">${todo.done ? "未完了に戻す" : "完了"}</button>
-                        <button class="edit">編集</button>
-                        <button class="delete">削除</button>
-                    </div>
-                `;
+                    <small>${todo.description || ""}</small><br>
+                    <small class="text-muted">期限: ${todo.due_date || "なし"}</small>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-success toggle-done">${todo.done ? "未完了" : "完了"}</button>
+                    <button class="btn btn-sm btn-warning edit">編集</button>
+                    <button class="btn btn-sm btn-danger delete">削除</button>
+                </div>
+            </div>
+        `;
 
-                // 完了切替
-                li.querySelector(".toggle-done").onclick = async () => {
-                    await fetch(`/todos/${todo.id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "same-origin",
-                        body: JSON.stringify({
-                            task: todo.task,
-                            description: todo.description,
-                            due_date: todo.due_date,
-                            done: !todo.done
-                        })
-                    });
-                    fetchTodos();
-                };
-
-                // 削除
-                li.querySelector(".delete").onclick = async () => {
-                    await fetch(`/todos/${todo.id}`, {
-                        method: "DELETE",
-                        credentials: "same-origin"
-                    });
-                    fetchTodos();
-                };
-
-                // 編集
-                li.querySelector(".edit").onclick = () => {
-                    li.innerHTML = `
-                        <input type="text" class="edit-input edit-task" value="${todo.task}" required>
-                        <textarea class="edit-input edit-description">${todo.description || ""}</textarea>
-                        <input type="date" class="edit-input edit-due" value="${todo.due_date || ""}">
-                        <button class="save">保存</button>
-                        <button class="cancel">キャンセル</button>
-                    `;
-
-                    // 保存
-                    li.querySelector(".save").onclick = async () => {
-                        const newTask = li.querySelector(".edit-task").value;
-                        const newDesc = li.querySelector(".edit-description").value;
-                        const newDue = li.querySelector(".edit-due").value || null;
-
-                        await fetch(`/todos/${todo.id}`, {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json" },
-                            credentials: "same-origin",
-                            body: JSON.stringify({
-                                task: newTask,
-                                description: newDesc,
-                                due_date: newDue,
-                                done: todo.done
-                            })
-                        });
-                        fetchTodos();
-                    };
-
-                    // キャンセル
-                    li.querySelector(".cancel").onclick = () => fetchTodos();
-                };
-
-                todoList.appendChild(li);
-            });
-        }
-
-        // 新規タスク追加
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            await fetch("/todos", {
-                method: "POST",
+        // 完了切替
+        li.querySelector(".toggle-done").onclick = async () => {
+            await fetch(`/todos/${todo.id}`, {
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 credentials: "same-origin",
                 body: JSON.stringify({
-                    task: taskInput.value,
-                    description: descriptionInput.value,
-                    due_date: dueDateInput.value || null
+                    task: todo.task,
+                    description: todo.description,
+                    due_date: todo.due_date,
+                    done: !todo.done
                 })
             });
-            taskInput.value = "";
-            descriptionInput.value = "";
-            dueDateInput.value = "";
             fetchTodos();
         };
 
-        fetchTodos();
-    </script>
-</body>
-</html>
+        // 削除
+        li.querySelector(".delete").onclick = async () => {
+            await fetch(`/todos/${todo.id}`, {
+                method: "DELETE",
+                credentials: "same-origin"
+            });
+            fetchTodos();
+        };
+
+        // 編集
+        li.querySelector(".edit").onclick = () => {
+            li.innerHTML = `
+                <input type="text" class="form-control edit-input edit-task mb-2" value="${todo.task}" required>
+                <textarea class="form-control edit-input edit-description mb-2">${todo.description || ""}</textarea>
+                <input type="date" class="form-control edit-input edit-due mb-2" value="${todo.due_date || ""}">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary save">保存</button>
+                    <button class="btn btn-sm btn-secondary cancel">キャンセル</button>
+                </div>
+            `;
+
+            // 保存
+            li.querySelector(".save").onclick = async () => {
+                const newTask = li.querySelector(".edit-task").value;
+                const newDesc = li.querySelector(".edit-description").value;
+                const newDue = li.querySelector(".edit-due").value || null;
+
+                await fetch(`/todos/${todo.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
+                        task: newTask,
+                        description: newDesc,
+                        due_date: newDue,
+                        done: todo.done
+                    })
+                });
+                fetchTodos();
+            };
+
+            // キャンセル
+            li.querySelector(".cancel").onclick = () => fetchTodos();
+        };
+
+        todoList.appendChild(li);
+    });
+}
+
+// 新規タスク追加
+form.onsubmit = async (e) => {
+    e.preventDefault();
+    await fetch("/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+            task: taskInput.value,
+            description: descriptionInput.value,
+            due_date: dueDateInput.value || null
+        })
+    });
+    taskInput.value = "";
+    descriptionInput.value = "";
+    dueDateInput.value = "";
+    fetchTodos();
+};
+
+fetchTodos();
+</script>
+{% endblock %}
