@@ -26,8 +26,8 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
-    env_file:
-      - ./flask-app/.env
+      - USER_ID=${USER_ID}
+      - USER_PASSWORD=${USER_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -50,8 +50,6 @@ services:
     image: mysql:8.1
     container_name: flask-todo-db
     restart: always
-    env_file:
-      - ./flask-app/.env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
