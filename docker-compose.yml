@@ -1,4 +1,7 @@
+name: traefik-projects
+
 services:
+  # --- Traefik ---
   traefik:
     image: traefik:v2.11
     container_name: traefik
@@ -16,6 +19,7 @@ services:
       - proxy-tier
     restart: always
 
+  # --- Flask Todo アプリ ---
   web:
     build:
       context: ./flask-app
@@ -65,9 +69,90 @@ services:
     networks:
       - internal
 
+  # --- Newsアプリ ---
+  news-db:
+    image: postgres:16
+    container_name: news-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api_server:
+    build:
+      context: ./news-analyzer/api_server
+    container_name: news-api
+    env_file:
+      - .env
+    depends_on:
+      news-db:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - internal
+      - proxy-tier
+    labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.news-api.rule=Host(`stock-news-api.go-pro-world.net`)"
+    - "traefik.http.routers.news-api.entrypoints=web,websecure"
+    - "traefik.http.routers.news-api.tls.certresolver=le"
+    - "traefik.http.services.news-api.loadbalancer.server.port=8000"
+    - "traefik.http.middlewares.api_headers.headers.customrequestheaders.Authorization=${API_TOKEN}"
+    - "traefik.http.routers.news-api.middlewares=api_headers"
+
+  scraper:
+    build:
+      context: ./news-analyzer/scraper
+    container_name: news-scraper
+    env_file:
+      - .env
+    environment:
+      API_URL: http://api_server:8000/news
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      - news-db
+      - api_server
+    networks:
+      - internal
+
+  streamlit:
+    build:
+      context: ./news-analyzer/streamlit
+    container_name: news-streamlit
+    env_file:
+      - .env
+    depends_on:
+      - api_server
+    expose:
+      - "8501"
+    networks:
+      - internal
+      - proxy-tier
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.news-streamlit.rule=Host(`stock-streamlit.go-pro-world.net`)"
+      - "traefik.http.routers.news-streamlit.entrypoints=web,websecure"
+      - "traefik.http.routers.news-streamlit.tls.certresolver=le"
+      - "traefik.http.services.news-streamlit.loadbalancer.server.port=8501"
+
+# --- Volumes ---
 volumes:
   mysql_data:
+  db_data:
 
+# --- Networks ---
 networks:
   proxy-tier:
     external: true

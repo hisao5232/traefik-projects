@@ -5,9 +5,6 @@ __pycache__/
 *.pyd
 *.sqlite3
 
-# Flask env
-flask-app/.env
-
 # Traefik cert data
 traefik/acme.json
 
