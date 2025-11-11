@@ -147,6 +147,28 @@ services:
       - "traefik.http.routers.news-streamlit.tls.certresolver=le"
       - "traefik.http.services.news-streamlit.loadbalancer.server.port=8501"
 
+  chat-app:
+    build:
+      context: ./chat-app  # FastAPI チャットアプリのディレクトリ
+    container_name: chat-app
+    volumes:
+      - ./chat-app/app:/app          # アプリコードをマウント
+      - ./chat-app/db:/app/db        # DBをホスト側に保存
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - internal
+      - proxy-tier
+    expose:
+      - "8001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chat-app.rule=Host(`simple-chat.go-pro-world.net`)"
+      - "traefik.http.routers.chat-app.entrypoints=web,websecure"
+      - "traefik.http.routers.chat-app.tls.certresolver=le"
+      - "traefik.http.services.chat-app.loadbalancer.server.port=8001"
+
 # --- Volumes ---
 volumes:
   mysql_data:
