@@ -42,13 +42,19 @@ services:
       - "5000"
     restart: always
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.flask-app.rule=Host(`todo-flask.go-pro-world.net`)"
-      - "traefik.http.routers.flask-app.entrypoints=web,websecure"
-      - "traefik.http.routers.flask-app.tls.certresolver=le"
-      - "traefik.http.routers.flask-app.service=flask-app"
-      - "traefik.http.services.flask-app.loadbalancer.server.port=5000"
-      - "traefik.http.services.flask-app.loadbalancer.server.scheme=http"
+    - "traefik.enable=true"
+    - "traefik.http.routers.flask-app.rule=Host(`todo-flask.go-pro-world.net`)"
+    - "traefik.http.routers.flask-app.entrypoints=websecure"
+    - "traefik.http.routers.flask-app.tls.certresolver=le"
+    - "traefik.http.routers.flask-app.service=flask-app"
+    - "traefik.http.services.flask-app.loadbalancer.server.port=5000"
+    - "traefik.http.services.flask-app.loadbalancer.server.scheme=http"
+
+    # --- HSTS（ブラウザにHTTPSを強制させる） ---
+    - "traefik.http.middlewares.hsts.headers.stsSeconds=31536000"
+    - "traefik.http.middlewares.hsts.headers.stsIncludeSubdomains=true"
+    - "traefik.http.middlewares.hsts.headers.stsPreload=true"
+    - "traefik.http.routers.flask-app.middlewares=hsts"
 
   db:
     image: mysql:8.1

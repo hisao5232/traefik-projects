@@ -1,8 +1,25 @@
 entryPoints:
   web:
     address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
   websecure:
     address: ":443"
+    http:
+      middlewares:
+        - hsts@docker  # HSTSを全HTTPS通信に適用（@dockerはラベル側で定義）
+      tls:
+        certResolver: le
+        domains:
+          - main: go-pro-world.net
+            sans:
+              - "*.go-pro-world.net"
+
   traefik:
     address: ":8080"
 
@@ -22,4 +39,6 @@ certificatesResolvers:
 
 api:
   dashboard: true
-  insecure: false
+  # 本番では "insecure: false" 推奨
+  # 代わりにダッシュボードを Traefik 自身でリバースプロキシする
+  insecure: true
